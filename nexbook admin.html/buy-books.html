@@ -1,0 +1,1778 @@
+<!doctype html>
+<html lang="en"> <!-- Dark mode class removed -->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NexBook - Premium Book Marketplace</title>
+  
+  <!-- Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Font: Inter --><link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <!-- Confetti Animation Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <!-- Lucide Icons --><script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    /* Base styling */
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      /* Use the system font stack for an Apple-like feel, with Inter as a fallback */ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+      /* Base text color for light mode */ -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+    }
+    
+    /* NEW: Page Loader Styles (copied from index.html for consistency) */
+    #page-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        background-color: #f9fafb; /* bg-gray-50 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.3s ease-out;
+    }
+    .spinner {
+        width: 48px;
+        height: 48px;
+        border: 5px solid #dbeafe; /* blue-100 */
+        border-bottom-color: #2563eb; /* blue-600 */
+        border-radius: 50%;
+        display: inline-block;
+        animation: spin 1s linear infinite;
+    }
+
+    /* Apple-style glassmorphism header */
+    .glass-header {
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      /* Dark mode classes removed */
+      @apply bg-white/75 border-b border-gray-200/50;
+    }
+    
+    /* Loader Animation */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    /* NEW: Search icon pop animation */
+    @keyframes searchIconPop {
+      0% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.2) rotate(10deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    .search-btn-animate {
+      animation: searchIconPop 300ms ease-out;
+    }
+    
+    .loader-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-left-color: #0f66cc;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    /* Dark mode for loader removed */
+
+    /* --- UNIFIED MODAL SYSTEM (FROM index.html) --- */
+    body.modal-open {
+        overflow: hidden;
+    }
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.35s ease-out, visibility 0.35s ease-out;
+    }
+    .modal-overlay.is-visible {
+        opacity: 1;
+        visibility: visible;
+    }
+    .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        transition: opacity 0.35s ease-out;
+    }
+    .modal-content {
+        position: relative;
+        background-color: white;
+        border-radius: 1.25rem;
+        box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        width: 100%;
+        transform: scale(0.95) translateY(10px);
+        opacity: 0;
+        transition: transform 0.35s ease-out, opacity 0.3s ease-out;
+    }
+    .modal-overlay:has(.modal-content--fullscreen) {
+        padding: 0;
+    }
+    .modal-content--fullscreen {
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+        box-shadow: none;
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .modal-overlay.is-visible .modal-content--fullscreen {
+        transform: translateY(0);
+    }
+    .modal-overlay:has(.modal-content--fullscreen) {
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+    .modal-overlay.is-visible .modal-content {
+        transform: scale(1);
+        opacity: 1;
+    }
+    .modal-overlay.is-visible .modal-backdrop {
+        opacity: 1;
+    }
+
+    /* Success Modal Styles */
+    .success-modal {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center;
+        z-index: 10000; opacity: 0; visibility: hidden; pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .success-modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
+    .success-modal-content {
+        background: white; border-radius: 24px; padding: 48px 40px; text-align: center;
+        max-width: 420px; width: 90%; position: relative;
+    }
+    
+    /* Popup Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+        transform: scale(0.8) translateY(30px);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .success-modal.show .success-modal-content { transform: scale(1) translateY(0); }
+    .success-icon {
+        width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669);
+        border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+    }
+    .button-animation { transition: transform 0.1s ease-in-out; }
+    .button-animation:active { transform: scale(0.95); }
+    .btn-loading { position: relative; cursor: wait; opacity: 0.7; }
+    .btn-loading::after {
+        content: ''; position: absolute; top: 50%; left: 50%;
+        width: 20px; height: 20px; margin: -10px 0 0 -10px;
+        border: 2px solid transparent; border-top: 2px solid currentColor;
+        border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    .toast {
+        position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px);
+        background: white; color: black; padding: 16px 24px; border-radius: 12px; font-weight: 500;
+        z-index: 10001; opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* ============================================================
+    NEW: Animated Search Bar Styles (Adapted for Tailwind)
+    ============================================================
+    */
+    
+    /* Search wrapper */
+    .search-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0px;
+      padding: 5px;
+      border-radius: 28px;
+      /* Dark mode classes removed, border added */
+      @apply bg-white shadow-md border border-gray-300;
+      /* NEW: Added transition for glow effect */
+      transition: border-color 300ms ease, box-shadow 300ms ease;
+    }
+
+    /* NEW: Add glow when input is focused */
+    .search-wrap:focus-within {
+      @apply border-blue-400; /* Brighter border */
+      box-shadow: 0 0 10px 2px rgba(96, 165, 250, 0.5); /* light blue glow (blue-400 / 50%) */
+    }
+
+    /* NEW: Styles for search bar expansion */
+    .header-content.search-active .nav-logo,
+    .header-content.search-active .desktop-nav {
+      opacity: 0;
+      visibility: hidden;
+      width: 0;
+      pointer-events: none;
+    }
+
+    .header-content.search-active .search-wrap {
+      width: 100%;
+    }
+
+    /* NEW: Remove gap between back button and search bar on mobile when active */
+    .header-content.search-active {
+      gap: 0;
+      padding-left: 0rem; /* Add some padding to compensate for removed gap */
+    }
+
+    .header-content.search-active .search-input {
+      width: 100%;
+    }
+    /* The input (initially collapsed) */
+    .search-input {
+      width: 0; /* collapsed */
+      min-width: 0;
+      padding: 0 8px;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 16px; /* Increased font size for better visibility */
+      transition: width 320ms cubic-bezier(.2, .9, .25, 1), padding 220ms;
+      transform-origin: left; /* important: expands to the right */
+      /* Dark mode classes removed */
+      @apply text-gray-900 caret-blue-600;
+    }
+
+    /* placeholder style */
+    .search-input::placeholder {
+      /* Dark mode classes removed */
+      @apply text-gray-500;
+    }
+
+    /* icon button on right */
+    .search-btn {
+      display: inline-grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      transition: transform 150ms ease, background 180ms;
+      /* Dark mode classes removed */
+      @apply bg-gray-100;
+    }
+    
+    /* SVG icon color (FIXED: removed @apply, using standard CSS) */
+    .search-btn svg path,
+    .search-btn svg circle {
+        stroke: #374151; /* gray-700 */
+    }
+    /* Dark mode rule for icon removed */
+
+    .search-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* when .open is present, input expands */
+    .search-wrap.open .search-input,
+    .header-content.search-active .search-input {
+      /* On desktop, it expands to 300px. On mobile, it will be 100% due to parent. */
+      width: 300px;
+    }
+
+    /* small clear (x) button inside wrapper on left (REMOVED) */
+    .clear-btn {
+      display: none;
+    }
+      /* NEW: Hide the default search 'X' (cancel) button */
+      .search-input::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        appearance: none;
+        display: none;
+      }
+    
+    /* ============================================================
+    NEW: Apple-Style Filter Selects
+    ============================================================
+    */
+    .apple-filter-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.75rem center;
+      background-repeat: no-repeat;
+      background-size: 1.25em;
+      /* Tailwind classes for styling */
+      @apply bg-gray-100 border-2 border-transparent text-gray-800 font-semibold;
+      @apply pr-16 rounded-3xl text-lg; /* UPDATED: Increased border radius for more curve */
+      @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600;
+      height: 48px; /* NEW: Set a fixed height */
+      padding-left: 32px; /* NEW: Set a fixed left padding to move text to the right */
+      padding-top: 0; padding-bottom: 0; /* NEW: Reset padding to center text with fixed height */
+      cursor: pointer;
+      width: 385px; /* Changed from min-width to fixed width for consistent sizing */
+      /* UPDATED: Added a permanent blue glow and a smooth transition */
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+      transition: all 0.3s ease-in-out;
+    }
+
+    /* ============================================================
+    NEW: Apple-Style Optgroup Headers
+    ============================================================
+    */
+    .apple-filter-select optgroup {
+      /* Use a standard, readable dark color for the header text */
+      color: #1d1d1f; /* A common dark grey used in UIs */
+      font-weight: 700; /* Make it bold to stand out as a title */
+      font-style: normal; /* Ensure it's not italicized by browser defaults */
+      padding: 8px 12px; /* Add some spacing around the header */
+      font-size: 0.9em; /* Slightly smaller than the options */
+    }
+
+    /* NEW: Apple-Style Connection Alert (from index.html) */
+    .connection-alert {
+        position: fixed;
+        bottom: 1.5rem; /* Positioned lower as there's no bottom nav on this page */
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        z-index: 10002; /* Above toast */
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 9999px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.75);
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(16px) saturate(1.8);
+        -webkit-backdrop-filter: blur(16px) saturate(1.8);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        opacity: 0;
+        visibility: hidden;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
+        will-change: transform, opacity;
+    }
+    .connection-alert.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* NEW: Dynamic Background Glow Effect */
+    #background-glow {
+      position: fixed;
+      inset: 0;
+      z-index: -10; /* Place it behind all content */
+      --glow-color: #e6eef8; /* Default color */
+      background: radial-gradient(
+        circle at 50% 50%,
+        var(--glow-color) 0%,
+        transparent 60%
+      );
+      opacity: 0.8; /* Adjust intensity of the glow */
+      transition: background 800ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* NEW: Dynamic Background Glow on Scroll */
+    #background-glow {
+      position: fixed;
+      inset: 0;
+      z-index: -10; /* Place it behind all content */
+      --glow-color: #e6eef8; /* Default color */
+      background: radial-gradient(
+        circle at 50% 50%,
+        var(--glow-color) 0%,
+        transparent 60%
+      );
+      opacity: 0.8; /* Adjust intensity of the glow */
+      transition: background 800ms cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: background; /* Performance hint */
+    }
+
+    /* NEW: Dynamic Background Glow Effect */
+    #background-glow {
+      position: fixed;
+      inset: 0;
+      z-index: -10; /* Place it behind all content */
+      --glow-color: #e6eef8; /* Default color */
+      background: radial-gradient(
+        circle at 50% 50%,
+        var(--glow-color) 0%,
+        transparent 60%
+      );
+      opacity: 0.8; /* Adjust intensity of the glow */
+      transition: background 800ms cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: background; /* Performance hint */
+    }
+
+    /* NEW: Shine Overlay Animation for Loading Cards (copied from index.html for consistency) */
+    @keyframes shimmer-overlay {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .loading-shine-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 20%, rgba(255, 255, 255, 0.6) 60%, rgba(255, 255, 255, 0) 100%);
+      animation: shimmer-overlay 1.5s infinite linear;
+      pointer-events: none; z-index: 10; opacity: 1; transition: opacity 0.5s ease-out;
+    }
+    .loading-shine-overlay.hidden { opacity: 0; transition: opacity 0.5s ease-out 0.5s; }
+
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- NEW: Element for the dynamic background glow -->
+  <div id="background-glow"></div>
+
+  <!-- NEW: Internet Connection Alert -->
+  <div id="connection-alert" class="connection-alert">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+      <span>No Internet Connection — Please check your network.</span>
+  </div>
+
+
+  <!-- 
+    ============================================================
+    Header / Navigation
+    ============================================================
+  -->
+  <!-- Page Loader -->
+  <div id="page-loader" class="hidden opacity-0 pointer-events-none">
+      <div class="spinner"></div>
+  </div>
+  
+  <header class="glass-header sticky top-0 z-50 transition-all duration-300">
+    <nav class="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+      <div id="header-content" class="header-content flex h-16 items-center justify-between gap-4 transition-all duration-300">
+        <!-- Left Side: Back Button & Logo -->
+        <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
+          <button id="back-button" class="p-2 rounded-full hover:bg-gray-200/70 transition-colors" aria-label="Go back">
+              <i data-lucide="arrow-left" class="w-6 h-6 text-gray-700"></i>
+          </button>
+          <a href="#" id="nav-logo" class="nav-logo text-2xl font-bold tracking-tight text-gray-900 whitespace-nowrap transition-all duration-300">NexBook</a>
+        </div>
+
+        
+        <!-- Desktop Nav --><div id="desktop-nav" class="desktop-nav hidden md:flex items-center space-x-6 transition-opacity duration-300">
+          <a href="#marketplace" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">B.Sc</a>
+          <a href="#marketplace" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Physics</a>
+          <a href="#marketplace" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Chemistry</a>
+          <a href="#marketplace" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Maths</a>
+          <a href="#" class="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">Sell a Book</a>
+        </div>
+        
+        <!-- Right Icons & Actions --><div class="flex items-center justify-end flex-grow min-w-0">
+          
+          <!-- ======================================================= -->
+          <!-- UPDATED: Animated Search Bar -->
+          <!-- ======================================================= -->
+          <div class="relative flex justify-end w-full">
+            <div class="search-wrap" id="searchWrap" aria-expanded="false">
+              <!-- the input — note no visible border, expands left because of transform-origin -->
+              <input id="searchInput" class="search-input" type="search" placeholder="Search books, authors..." aria-label="Search" autocomplete="off" />
+              
+              <!-- search icon button on the right -->
+              <button class="search-btn" id="searchBtn" aria-label="Open search">
+                <!-- simple magnifier SVG (stroke color removed, now handled by CSS) -->
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="11" cy="11" r="6.2" stroke-width="2"/>
+                </svg>
+              </button>
+            </div>
+            <!-- NEW: Suggestions dropdown -->
+            <div id="search-suggestions" class="absolute top-full mt-2 w-full bg-white rounded-xl shadow-lg border z-20 hidden max-h-60 overflow-y-auto"></div>
+          </div>
+          <!-- ======================================================= -->
+          <!-- END: Animated Search Bar -->
+          <!-- ======================================================= -->
+          
+          <!-- Theme Toggle Button REMOVED -->
+          
+          <!-- Sign In Button REMOVED -->
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- 
+    ============================================================
+    Main Content Area
+    ============================================================
+  --><main>
+
+    <!-- 
+      ============================================================
+      Hero Section
+      ============================================================
+    --><section class="relative overflow-hidden bg-gradient-to-b from-white to-blue-50">
+      <div class="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+        <div class="py-24 md:py-32 lg:py-40 text-center">
+          <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tighter text-gray-900">
+            Redefining Book Exchange.
+          </h1>
+          <p class="mt-4 md:mt-6 max-w-2xl mx-auto text-lg md:text-xl text-gray-600">
+            The premium marketplace for students and professionals to buy, sell, and discover academic books.
+          </p>
+          <div class="mt-8 md:mt-10 flex flex-wrap gap-4 justify-center">
+            <a href="#marketplace" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+              Browse Books
+            </a>
+            <a href="#" class="bg-white/50 backdrop-blur-sm border border-gray-300/50 text-gray-700 font-semibold px-6 py-3 rounded-lg hover:bg-white/80 transition-all duration-300">
+              Sell Your Books
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 
+      ============================================================
+      Marketplace Grid Section
+      ============================================================
+    --><section id="marketplace" class="py-16 md:py-24">
+      <div class="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+        
+        <!-- NEW: Filter Bar -->
+        <div class="mb-8 flex flex-wrap gap-4 justify-center md:justify-start">
+          <!-- NEW Filter 1: Stream -->
+          <div class="relative">
+            <label for="stream-filter" class="block text-sm font-medium text-gray-700 mb-1">Stream</label>
+            <select id="stream-filter" class="apple-filter-select">
+                <option value="all">All Streams</option>
+                <optgroup label="Undergraduate (UG)">
+                    <option value="B.Sc.">B.Sc.</option>
+                    <option value="B.A.">B.A.</option>
+                    <option value="B.Com.">B.Com.</option>
+                    <option value="BCA">BCA</option>
+                    <option value="BBA">BBA</option>
+                </optgroup>
+                <optgroup label="Postgraduate (PG)">
+                    <option value="M.Sc.">M.Sc.</option>
+                    <option value="M.A.">M.A.</option>
+                    <option value="M.Com.">M.Com.</option>
+                    <option value="MCA">MCA</option>
+                </optgroup>
+            </select>
+          </div>
+          
+          <!-- Filter 2: Subject (Class) - Will be populated by JS -->
+          <div class="relative">
+            <label for="subject-filter" class="block text-sm font-medium text-gray-700 mb-1">Subject (Class)</label>
+            <select id="subject-filter" class="apple-filter-select">
+              <option value="all">All Subjects</option>
+              <!-- Options will be added by JS -->
+            </select>
+          </div>
+          <!-- Filter 3: Year -->
+          <div class="relative">
+            <label for="year-filter" class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+            <select id="year-filter" class="apple-filter-select">
+              <option value="all">All Years</option>
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="PG 1st Year">PG 1st Year</option>
+              <option value="PG Final Year">PG Final Year</option>
+            </select>
+          </div>
+        </div>
+        <!-- End: Filter Bar -->
+        
+        <h2 id="marketplace-title" class="text-3xl md:text-4xl font-bold tracking-tight mb-8 md:mb-12">
+          B.Sc. Listings (Rajasthan University)
+        </h2>
+        
+        <!-- NEW: Skeleton loaders for better UX -->
+        <div id="book-grid-wrapper" class="relative">
+          <div id="book-grid-skeleton" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div></div>
+            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div></div>
+            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div></div>
+            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div></div>
+          </div>
+          <!-- NEW SHINE OVERLAY -->
+          <div id="book-loading-shine" class="loading-shine-overlay"></div>
+        </div>
+        
+        <!-- 
+          Book cards will be dynamically inserted here by JavaScript.
+        --><div id="book-grid" class="flex flex-wrap justify-center gap-6 md:gap-8">
+          <!-- JS will populate this --></div>
+          
+        <!-- NEW: No results message -->
+        <div id="no-results" class="text-center p-8 text-gray-500 hidden">
+          <p>No books found matching your search.</p>
+        </div>
+
+        <!-- 
+          Loader for infinite scroll.
+        --><div id="loader" class="flex justify-center items-center p-8 gap-3 text-gray-600 hidden">
+          <div class="loader-spinner"></div>
+          <span>Loading more books...</span>
+        </div>
+        
+        <!-- End of results message --><div id="end-of-results" class="text-center p-8 text-gray-500 hidden">
+          <p>You've reached the end of the listings.</p>
+        </div>
+
+        <style>
+          /* NEW: Skeleton Loader for Book Cards */
+          @keyframes pulse {
+              50% { opacity: .5; }
+          }
+          .skeleton-card {
+              background-color: #e5e7eb; /* gray-200 */
+              border-radius: 1rem; /* rounded-2xl */
+              overflow: hidden;
+              animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          }
+          .skeleton-img {
+              height: 16rem; /* h-64 */
+              background-color: #d1d5db; /* gray-300 */
+          }
+          .skeleton-text { height: 1rem; margin: 1rem; background-color: #d1d5db; border-radius: 0.25rem; }
+        </style>
+        
+      </div>
+    </section>
+  </main>
+
+  <!-- 
+    ============================================================
+    MODALS (Ported from index.html for consistency)
+    ============================================================
+  -->
+  <div id="modalContainer">
+      <!-- Checkout Modal -->
+      <div id="checkoutModal" class="modal-overlay" role="dialog" aria-modal="true">
+          <div class="modal-backdrop"></div>
+          <div id="checkoutModalContent" class="modal-content modal-content--fullscreen flex flex-col">
+              <!-- Modal content will be injected here by JS -->
+          </div>
+      </div>
+
+      <!-- Auth Modal -->
+      <div id="authModal" class="modal-overlay" role="dialog" aria-modal="true">
+          <div class="modal-backdrop"></div> 
+          <div class="modal-content w-full max-w-md">
+              <button id="closeAuthModalBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 button-animation z-10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+              <div class="p-8">
+                  <h2 class="text-2xl font-bold mb-4 text-center">Welcome</h2>
+                  <div id="auth-view-container">
+                      <!-- Auth content (login/register) will be injected here -->
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="successModal" class="success-modal">
+      <div class="success-modal-content">
+          <div class="success-icon">
+              <svg width="48" height="48" fill="white" viewBox="0 0 24 24">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+              </svg>
+          </div>
+          <h2 id="successTitle" style="font-size: 2.2rem; font-weight: bold; margin-bottom: 12px; color: #1f2937;">Order Confirmed!</h2>
+          <p id="successProductName" style="font-size: 1.2rem; margin-bottom: 8px; color: #6b7280; font-weight: 600;">Product Name</p>
+          <p id="successMessage" style="margin-bottom: 32px; color: #6b7280; line-height: 1.6;">Your order has been placed successfully and will be processed shortly.</p>
+          <button id="successContinueBtn" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Continue</button>
+      </div>
+  </div>
+
+  <script>
+      // --- GLOBAL FIREBASE INITIALIZATION ---
+      const firebaseConfig = { apiKey: "AIzaSyDUPekN9JiKAPi157pPM-Eft0g1a0sYiR0", authDomain: "nexbookx.firebaseapp.com", projectId: "nexbookx", storageBucket: "nexbookx.appspot.com", messagingSenderId: "236199659180", appId: "1:236199659180:web:65f53382fcd232a2aa8109", measurementId: "G-VVSGG5W95E" };
+      const app = firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+  </script>
+
+
+  <!-- 
+    ============================================================
+    Footer
+    ============================================================
+  --><footer class="border-t border-gray-200/80">
+    <div class="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-12 md:py-16">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+        <div class="text-sm text-gray-600 text-center md:text-left">
+          &copy; 2025 NexBook. All rights reserved. <br class="md:hidden"> A premium student marketplace.
+        </div>
+        <div class="flex items-center gap-6">
+          <a href="#" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">About</a>
+          <a href="#" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Terms</a>
+          <a href="#" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Privacy</a>
+          <!-- NEW: X (Twitter) Logo -->
+          <a href="#" class="text-gray-500 hover:text-gray-800 transition-colors" aria-label="X (formerly Twitter)">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865l8.875 11.633Z"/>
+            </svg>
+          </a>
+          <!-- NEW: NeX Logo (Updated width and viewBox) -->
+          <a href="#" class="text-gray-500 hover:text-gray-800 transition-colors" aria-label="NeX">
+            <svg class="w-8 h-5" fill="currentColor" viewBox="0 0 32 20">
+              <text x="0" y="15" font-family="Inter, sans-serif" font-size="16" font-weight="bold">NeX</text>
+            </svg>
+          </a>
+          <!-- Instagram Logo -->
+          <a href="#" class="text-gray-500 hover:text-gray-800 transition-colors">
+            <i data-lucide="instagram" class="w-5 h-5"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 
+    ============================================================
+    JavaScript
+    ============================================================
+  --><script>
+    // This script remains for page-specific UI logic like search and infinite scroll.
+  
+    // ============================================================
+    // Animated Search Bar Logic (UPDATED with filter)
+    // ============================================================
+    const wrap = document.getElementById('searchWrap');
+    const btn = document.getElementById('searchBtn');
+    const input = document.getElementById('searchInput');
+    const mainBookGrid = document.getElementById('book-grid');
+    const mainLoader = document.getElementById('loader');
+    const mainEndOfResults = document.getElementById('end-of-results');
+    const mainNoResults = document.getElementById('no-results');
+    const headerContent = document.getElementById('header-content');
+    const marketplaceTitle = document.getElementById('marketplace-title');
+    // NEW: Get filter elements
+    const backButton = document.getElementById('back-button'); // Moved declaration here
+    const suggestionsContainer = document.getElementById('search-suggestions');
+
+    const streamFilter = document.getElementById('stream-filter');
+    const subjectFilter = document.getElementById('subject-filter');
+    const yearFilter = document.getElementById('year-filter');
+
+    // NEW: Define subject map for dynamic filters
+    const subjectMap = {
+        'all': ['All Subjects', 'Physics', 'Chemistry', 'Mathematics', 'Zoology', 'Botany', 'Environmental Science', 'Biotechnology', 'Microbiology', 'Geography', 'Psychology', 'Statistics', 'Information Technology (I.T.)', 'Hindi', 'English', 'Political Science', 'Public Administration', 'History', 'Economics', 'Journalism & Mass Communication', 'Sociology', 'Yoga', 'Commerce (BADM, ABST, EAFM)', 'Forensic Science', 'Computer Applications (MCA)', 'Social Work (MSW)', 'Cyber Security', 'AI & Data Science'],
+        'B.Sc.': ['All Subjects', 'Physics', 'Chemistry', 'Maths', 'Zoology', 'Botany', 'Environmental Science', 'Biotechnology', 'Microbiology', 'Computer Science', 'Statistics'],
+        'B.A.': ['All Subjects', 'Hindi', 'English', 'History', 'Political Science', 'Geography', 'Public Administration', 'Economics', 'Sociology', 'Psychology', 'Journalism & Mass Communication', 'Sanskrit', 'Philosophy', 'Yoga'],
+        'B.Com.': ['All Subjects', 'BADM', 'ABST', 'EAFM'],
+        'BCA': ['All Subjects', 'Computer Applications'],
+        'BBA': ['All Subjects', 'Business Administration'],
+        'M.Sc.': ['All Subjects', 'Physics', 'Chemistry', 'Mathematics', 'Botany', 'Zoology', 'Biotechnology', 'Environmental Science', 'Microbiology', 'I.T.', 'AI & Data Science', 'Cyber Security', 'Forensic Science', 'Statistics', 'Psychology', 'Geography'],
+        'M.A.': ['All Subjects', 'Hindi', 'Geography', 'Political Science', 'Public Administration', 'History', 'Economics', 'Journalism & Mass Communication', 'MSW (Social Work)', 'Sociology', 'English', 'Psychology', 'Yoga'],
+        'M.Com.': ['All Subjects', 'EAFM', 'ABST', 'BADM'],
+        'MCA': ['All Subjects', 'Computer Applications']
+    };
+
+    // Helper function to generate a more descriptive title
+    function updateMarketplaceTitle() {
+        const stream = streamFilter.value;
+        const subject = subjectFilter.value;
+        const year = yearFilter.value;
+
+        let titleParts = [];
+        if (stream !== 'all') titleParts.push(stream);
+        if (subject !== 'all') titleParts.push(subject);
+        if (year !== 'all') titleParts.push(year);
+
+        if (titleParts.length > 0) {
+            marketplaceTitle.textContent = `${titleParts.join(' / ')} Listings`;
+        } else {
+            marketplaceTitle.textContent = 'All Listings (Rajasthan University)';
+        }
+    }
+    
+    // NEW: Function to update year filter based on stream
+    function updateYearFilter() {
+        const selectedStream = streamFilter.value;
+        yearFilter.innerHTML = ''; // Clear old options
+
+        const ugCourses = ['B.Sc.', 'B.A.', 'B.Com.', 'BCA', 'BBA'];
+        const pgCourses = ['M.Sc.', 'M.A.', 'M.Com.', 'MCA'];
+
+        let yearOptions = [
+            { value: 'all', text: 'All Years' }
+        ];
+
+        if (ugCourses.includes(selectedStream)) {
+            yearOptions.push({ value: '1st Year', text: '1st Year' });
+            yearOptions.push({ value: '2nd Year', text: '2nd Year' });
+            yearOptions.push({ value: '3rd Year', text: '3rd Year' });
+        } else if (pgCourses.includes(selectedStream)) {
+            yearOptions.push({ value: 'PG 1st Year', text: 'PG 1st Year' });
+            yearOptions.push({ value: 'PG Final Year', text: 'PG Final Year' });
+        } else { // 'all' streams selected
+            yearOptions.push({ value: '1st Year', text: '1st Year' });
+            yearOptions.push({ value: '2nd Year', text: '2nd Year' });
+            yearOptions.push({ value: '3rd Year', text: '3rd Year' });
+            yearOptions.push({ value: 'PG 1st Year', text: 'PG 1st Year' });
+            yearOptions.push({ value: 'PG Final Year', text: 'PG Final Year' });
+        }
+
+        yearOptions.forEach(opt => yearFilter.add(new Option(opt.text, opt.value)));
+    }
+
+    // NEW: Function to update subject filter based on stream
+    function updateSubjectFilter() {
+      const selectedStream = streamFilter.value;
+      const subjects = subjectMap[selectedStream] || subjectMap['all'];
+      
+      subjectFilter.innerHTML = ''; // Clear old options
+      
+      subjects.forEach(subject => {
+        const option = document.createElement('option');
+        option.value = (subject === 'All Subjects') ? 'all' : subject;
+        option.textContent = subject;
+        subjectFilter.appendChild(option);
+      });
+      
+      // Reset subject and year filters
+      subjectFilter.value = 'all';
+      yearFilter.value = 'all';
+      
+      // NEW: Update the year filter based on the new stream
+      updateYearFilter();
+      
+      // Apply filters
+      applyFiltersAndSearch();
+    }
+
+    // Toggle open/close when clicking the icon
+    btn.addEventListener('click', (e) => {
+      // NEW: Add animation class
+      btn.classList.add('search-btn-animate');
+      
+      // NEW: Remove class after animation finishes
+      // We use 'animationend' to remove it, so it can be re-triggered
+      btn.addEventListener('animationend', () => {
+        btn.classList.remove('search-btn-animate');
+      }, { once: true }); // { once: true } automatically removes this event listener after it runs
+
+      const isOpen = wrap.classList.toggle('open');
+      const isMobile = window.innerWidth < 768;
+      wrap.setAttribute('aria-expanded', String(isOpen));
+
+      if (isOpen) {
+        if (isMobile) {
+          headerContent.classList.add('search-active');
+          backButton.setAttribute('data-action', 'close-search');
+        }
+        // focus input after small timeout to let width begin animating
+        setTimeout(() => input.focus(), 80);
+      } else {
+        if (isMobile) {
+          headerContent.classList.remove('search-active');
+          backButton.removeAttribute('data-action');
+        }
+        input.blur();
+        // Clear search and restore grid
+        if (input.value.trim() !== '') {
+          input.value = '';
+          applyFiltersAndSearch(); // Restore grid
+        }
+        suggestionsContainer.classList.add('hidden');
+      }
+    });
+
+    // NEW: Show/hide suggestions
+    function renderSuggestions(results) {
+        if (results.length === 0) {
+            suggestionsContainer.classList.add('hidden');
+            return;
+        }
+
+        // Don't show suggestions if the search bar is not open
+        if (!wrap.classList.contains('open')) {
+            suggestionsContainer.classList.add('hidden');
+            return;
+        }
+
+        suggestionsContainer.innerHTML = results.slice(0, 5).map(book => {
+            const originalIndex = allBooks.indexOf(book);
+            return `
+                <div class="suggestion-item p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0" data-book-index="${originalIndex}">
+                    <p class="font-semibold text-sm text-gray-800">${book.title}</p>
+                    <p class="text-xs text-gray-500">${book.author}</p>
+                </div>
+            `;
+        }).join('');
+
+        suggestionsContainer.classList.remove('hidden');
+    }
+
+    // NEW: Handle suggestion click
+    suggestionsContainer.addEventListener('click', (e) => {
+        const item = e.target.closest('.suggestion-item');
+        if (item) {
+            const bookIndex = item.dataset.bookIndex;
+            const card = document.querySelector(`.book-card[data-book-index="${bookIndex}"]`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Highlight the card briefly
+                card.style.transition = 'transform 200ms ease, box-shadow 200ms ease';
+                card.style.transform = 'scale(1.03)';
+                card.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.6)';
+                setTimeout(() => { card.style.transform = ''; card.style.boxShadow = ''; }, 1500);
+            }
+            suggestionsContainer.classList.add('hidden');
+        }
+    });
+
+    // If user clicks outside — close the search
+    document.addEventListener('click', (ev) => {
+      if (!wrap.contains(ev.target)) {
+        if (wrap.classList.contains('open')) {
+          wrap.classList.remove('open');
+          wrap.setAttribute('aria-expanded', 'false');
+          // Clear search and restore grid
+          if (input.value.trim() !== '') {
+            input.value = '';
+            applyFiltersAndSearch(); // Restore grid
+          }
+          headerContent.classList.remove('search-active');
+          // NEW: Hide suggestions
+          suggestionsContainer.classList.add('hidden');
+        }
+      }
+    });
+
+    // Keyboard: Esc closes
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        wrap.classList.remove('open');
+        wrap.setAttribute('aria-expanded', 'false');
+        input.blur();
+        btn.focus();
+        // Clear search and restore grid
+        if (input.value.trim() !== '') {
+          input.value = '';
+          applyFiltersAndSearch(); // Restore grid
+        }
+        headerContent.classList.remove('search-active');
+      }
+    });
+
+    // Submit on Enter
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Just close the bar, keeping the filtered results
+        wrap.classList.remove('open');
+        wrap.setAttribute('aria-expanded', 'false');
+        input.blur();
+      }
+    });
+    
+    // Real-time search filtering
+    input.addEventListener('input', handleSearchFilter);
+    // NEW: Listen for filter changes
+    streamFilter.addEventListener('change', updateSubjectFilter);
+    subjectFilter.addEventListener('change', applyFiltersAndSearch);
+    yearFilter.addEventListener('change', applyFiltersAndSearch);
+  
+    // ============================================================
+    // Original Page JavaScript
+    // ============================================================
+  
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Theme Toggle Logic (REMOVED)
+    
+
+    // ============================================================
+    // Marketplace Logic (Infinite Scroll + Modals)
+    // ============================================================
+
+    // 1. Book Data (UPDATED: Only 2 books as requested, Stream added to details)
+    const allBooks = [
+      // --- BSc PHYSICS ---
+      // Year 1
+      { title: "Mechanics", author: "D.S. Mathur", details: "B.Sc. | Physics | 1st Year", price: 380, publisher: "S. Chand", description: "Covers classical mechanics, laws of motion, conservation principles, and rotational dynamics.", seed: "bsc_phy_y1_mech" },
+      { title: "Thermal Physics", author: "Garg, Bansal, Ghosh", details: "B.Sc. | Physics | 1st Year", price: 450, publisher: "McGraw Hill", description: "Fundamentals of thermodynamics, kinetic theory of gases, and statistical mechanics.", seed: "bsc_phy_y1_therm" },
+      { title: "Optics", author: "Ajoy Ghatak", details: "B.Sc. | Physics | 1st Year", price: 410, publisher: "Tata McGraw-Hill", description: "Geometrical and physical optics, including interference, diffraction, and polarization.", seed: "bsc_phy_y1_opt" },
+      { title: "Electricity & Magnetism", author: "D.C. Tayal", details: "B.Sc. | Physics | 1st Year", price: 420, publisher: "Himalaya Publishing", description: "Covers electrostatics, magnetostatics, and electromagnetic induction.", seed: "bsc_phy_y1_em" },
+      { title: "Mathematical Physics", author: "H.K. Dass", details: "B.Sc. | Physics | 1st Year", price: 480, publisher: "S. Chand", description: "Essential mathematical tools for physicists, including vector calculus and differential equations.", seed: "bsc_phy_y1_math" },
+      // Year 2
+      { title: "Waves & Oscillations", author: "N. Subrahmanyam, Brij Lal", details: "B.Sc. | Physics | 2nd Year", price: 350, publisher: "Vikas Publishing", description: "A comprehensive text on simple harmonic motion, damped and forced oscillations, and wave phenomena.", seed: "bsc_phy_y2_wave" },
+      { title: "Statistical Physics", author: "B.B. Laud", details: "B.Sc. | Physics | 2nd Year", price: 400, publisher: "New Age International", description: "Introduction to classical and quantum statistics, ensembles, and their applications.", seed: "bsc_phy_y2_stat" },
+      { title: "Modern Physics", author: "R. Murugeshan", details: "B.Sc. | Physics | 2nd Year", price: 460, publisher: "S. Chand", description: "Covers relativity, quantum theory, atomic structure, and nuclear physics.", seed: "bsc_phy_y2_mod" },
+      { title: "Electromagnetic Theory", author: "David J. Griffiths", details: "B.Sc. | Physics | 2nd Year", price: 550, publisher: "Pearson", description: "Advanced treatment of Maxwell's equations, electromagnetic waves, and radiation.", seed: "bsc_phy_y2_emt" },
+      // Year 3
+      { title: "Quantum Mechanics", author: "Zettili", details: "B.Sc. | Physics | 3rd Year", price: 520, publisher: "Wiley", description: "Concepts and formalism of quantum mechanics, including Schrödinger equation and its applications.", seed: "bsc_phy_y3_qm" },
+      { title: "Atomic & Molecular Physics", author: "Raj Kumar", details: "B.Sc. | Physics | 3rd Year", price: 430, publisher: "Kedar Nath Ram Nath", description: "Study of atomic spectra, molecular structure, and spectroscopic techniques.", seed: "bsc_phy_y3_amp" },
+      { title: "Solid State Physics", author: "Puri & Babbar", details: "B.Sc. | Physics | 3rd Year", price: 490, publisher: "S. Chand", description: "Crystal structures, band theory, and properties of solids.", seed: "bsc_phy_y3_ssp" },
+      { title: "Nuclear Physics", author: "D.C. Tayal", details: "B.Sc. | Physics | 3rd Year", price: 440, publisher: "Himalaya Publishing", description: "Properties of the nucleus, radioactivity, nuclear reactions, and particle physics.", seed: "bsc_phy_y3_nuc" },
+      { title: "Electronics", author: "V.K. Mehta", details: "B.Sc. | Physics | 3rd Year", price: 470, publisher: "S. Chand", description: "Semiconductor devices, amplifiers, oscillators, and digital electronics.", seed: "bsc_phy_y3_elec" },
+
+      // --- BSc PHYSICS HONOURS ---
+      // Year 1
+      { title: "Mechanics (Hons)", author: "J.C. Upadhyaya", details: "B.Sc. | Physics | 1st Year", price: 420, publisher: "Himalaya Publishing", description: "Advanced classical mechanics for honours students.", seed: "hons_phy_y1_mech" },
+      { title: "Electromagnetism (Hons)", author: "Matthew N.O. Sadiku", details: "B.Sc. | Physics | 1st Year", price: 580, publisher: "Oxford University Press", description: "Rigorous treatment of electromagnetic fields and waves.", seed: "hons_phy_y1_em" },
+      { title: "Oscillations & Waves (Hons)", author: "A.P. French", details: "B.Sc. | Physics | 1st Year", price: 450, publisher: "CRC Press", description: "In-depth study of vibrations and wave propagation.", seed: "hons_phy_y1_wave" },
+      { title: "Digital Electronics (Hons)", author: "R. P. Jain", details: "B.Sc. | Physics | 1st Year", price: 490, publisher: "Tata McGraw-Hill", description: "Fundamentals of digital circuits, logic gates, and microprocessors.", seed: "hons_phy_y1_digi" },
+      // Year 2
+      { title: "Statistical & Thermodynamical Physics (Hons)", author: "F. Reif", details: "B.Sc. | Physics | 2nd Year", price: 530, publisher: "Waveland Press", description: "Comprehensive coverage of statistical mechanics and thermodynamics.", seed: "hons_phy_y2_thermo" },
+      { title: "Optics (Hons)", author: "Eugene Hecht", details: "B.Sc. | Physics | 2nd Year", price: 600, publisher: "Pearson", description: "A detailed exploration of modern optics and photonics.", seed: "hons_phy_y2_opt" },
+      { title: "Electronics & Solid State Devices (Hons)", author: "Ben G. Streetman", details: "B.Sc. | Physics | 2nd Year", price: 550, publisher: "Pearson", description: "Physics of semiconductor devices and their applications.", seed: "hons_phy_y2_ssd" },
+      { title: "Physics of Materials (Hons)", author: "S.O. Pillai", details: "B.Sc. | Physics | 2nd Year", price: 480, publisher: "New Age", description: "Study of the physical properties of various materials.", seed: "hons_phy_y2_pom" },
+      // Year 3
+      { title: "Atomic & Molecular Physics (Hons)", author: "B.H. Bransden", details: "B.Sc. | Physics | 3rd Year", price: 510, publisher: "Pearson", description: "Advanced topics in atomic and molecular structure and spectra.", seed: "hons_phy_y3_amp" },
+      { title: "Advanced Physics Topics (Hons)", author: "Various", details: "B.Sc. | Physics | 3rd Year", price: 470, publisher: "University Press", description: "A collection of advanced topics for final year honours students.", seed: "hons_phy_y3_adv" },
+
+      // --- BSc CHEMISTRY ---
+      // Year 1
+      { title: "Inorganic Chemistry", author: "Puri, Sharma, Kalia", details: "B.Sc. | Chemistry | 1st Year", price: 450, publisher: "Vishal Publishing", description: "Principles of inorganic chemistry, covering periodic properties and chemical bonding.", seed: "bsc_chem_y1_inorg" },
+      { title: "Organic Chemistry", author: "Paula Yurkanis Bruice", details: "B.Sc. | Chemistry | 1st Year", price: 650, publisher: "Pearson", description: "Fundamental concepts of organic chemistry, reaction mechanisms, and spectroscopy.", seed: "bsc_chem_y1_org" },
+      { title: "Physical Chemistry", author: "Puri, Sharma, Pathania", details: "B.Sc. | Chemistry | 1st Year", price: 500, publisher: "Vishal Publishing", description: "Covers thermodynamics, chemical kinetics, and electrochemistry.", seed: "bsc_chem_y1_phys" },
+      // Year 2
+      { title: "Coordination Chemistry", author: "Asim K. Das", details: "B.Sc. | Chemistry | 2nd Year", price: 380, publisher: "CBS Publishers", description: "Theories and applications of coordination compounds.", seed: "bsc_chem_y2_coord" },
+      { title: "Stereochemistry", author: "D. Nasipuri", details: "B.Sc. | Chemistry | 2nd Year", price: 420, publisher: "New Age International", description: "Conformation and configuration of organic molecules.", seed: "bsc_chem_y2_stereo" },
+      { title: "Thermodynamics", author: "Peter Atkins", details: "B.Sc. | Chemistry | 2nd Year", price: 580, publisher: "Oxford University Press", description: "Advanced chemical thermodynamics and its applications.", seed: "bsc_chem_y2_thermo" },
+      { title: "Electrochemistry", author: "Carl H. Hamann", details: "B.Sc. | Chemistry | 2nd Year", price: 490, publisher: "Wiley-VCH", description: "Principles of electrochemical cells, corrosion, and electrolysis.", seed: "bsc_chem_y2_elec" },
+      // Year 3
+      { title: "Spectroscopy", author: "P.S. Kalsi", details: "B.Sc. | Chemistry | 3rd Year", price: 460, publisher: "New Age International", description: "Spectroscopic methods for structure elucidation of organic compounds.", seed: "bsc_chem_y3_spec" },
+      { title: "Industrial Chemistry", author: "B.K. Sharma", details: "B.Sc. | Chemistry | 3rd Year", price: 400, publisher: "Goel Publishing", description: "Chemical processes in various industries.", seed: "bsc_chem_y3_ind" },
+
+      // --- BSc CHEMISTRY HONOURS ---
+      { title: "Analytical Chemistry (Hons)", author: "Gary D. Christian", details: "B.Sc. | Chemistry | 1st Year", price: 550, publisher: "Wiley", description: "Quantitative and instrumental analysis techniques.", seed: "hons_chem_y1_anal" },
+      { title: "Acids & Bases (Hons)", author: "R.P. Bell", details: "B.Sc. | Chemistry | 2nd Year", price: 350, publisher: "Chapman and Hall", description: "Theories and properties of acids and bases in chemistry.", seed: "hons_chem_y2_ab" },
+      { title: "Alcohols & Phenols (Hons)", author: "I.L. Finar", details: "B.Sc. | Chemistry | 2nd Year", price: 480, publisher: "Pearson", description: "Detailed study of alcohols, phenols, and ethers.", seed: "hons_chem_y2_ap" },
+      { title: "Aldehydes & Ketones (Hons)", author: "Jerry March", details: "B.Sc. | Chemistry | 2nd Year", price: 620, publisher: "Wiley", description: "Advanced organic chemistry of carbonyl compounds.", seed: "hons_chem_y2_ak" },
+      { title: "Chromatography (Hons)", author: "B.K. Sharma", details: "B.Sc. | Chemistry | 2nd Year", price: 410, publisher: "Goel Publishing", description: "Principles and applications of chromatographic techniques.", seed: "hons_chem_y2_chrom" },
+
+      // --- BSc MATHEMATICS ---
+      // Year 1
+      { title: "Differential Calculus", author: "Shanti Narayan", details: "B.Sc. | Mathematics | 1st Year", price: 320, publisher: "S. Chand", description: "Fundamental concepts of differentiation and its applications.", seed: "bsc_math_y1_diff" },
+      { title: "Integral Calculus", author: "Gorakh Prasad", details: "B.Sc. | Mathematics | 1st Year", price: 340, publisher: "Pothishala", description: "Techniques of integration and their applications.", seed: "bsc_math_y1_int" },
+      { title: "Analytic Geometry", author: "H.K. Dass", details: "B.Sc. | Mathematics | 1st Year", price: 360, publisher: "S. Chand", description: "Two and three-dimensional coordinate geometry.", seed: "bsc_math_y1_ag" },
+      { title: "Abstract Algebra", author: "Khanna & Bhambri", details: "B.Sc. | Mathematics | 1st Year", price: 400, publisher: "Vikas Publishing", description: "Introduction to groups, rings, and fields.", seed: "bsc_math_y1_aa" },
+      { title: "Discrete Mathematics", author: "C.L. Liu", details: "B.Sc. | Mathematics | 1st Year", price: 450, publisher: "Tata McGraw-Hill", description: "Covers set theory, logic, combinatorics, and graph theory.", seed: "bsc_math_y1_dm" },
+      // Year 2
+      { title: "Numerical Analysis", author: "S.S. Sastry", details: "B.Sc. | Maths | 2nd Year", price: 430, publisher: "PHI Learning", description: "Methods for numerical solution of mathematical problems.", seed: "bsc_math_y2_na" },
+      { title: "Real Analysis", author: "S.C. Malik", details: "B.Sc. | Maths | 2nd Year", price: 410, publisher: "New Age", description: "Rigorous study of the real number system, sequences, and series.", seed: "bsc_math_y2_ra" },
+      { title: "Complex Analysis", author: "J.N. Sharma", details: "B.Sc. | Maths | 2nd Year", price: 390, publisher: "Krishna Prakashan", description: "Functions of a complex variable, differentiation, and integration.", seed: "bsc_math_y2_ca" },
+      { title: "Differential Equations", author: "M.D. Raisinghania", details: "B.Sc. | Maths | 2nd Year", price: 480, publisher: "S. Chand", description: "Ordinary and partial differential equations and their solutions.", seed: "bsc_math_y2_de" },
+      // Year 3
+      { title: "Linear Algebra", author: "Schaum's Outlines", details: "B.Sc. | Maths | 3rd Year", price: 460, publisher: "McGraw Hill", description: "Vector spaces, linear transformations, and matrices.", seed: "bsc_math_y3_la" },
+      { title: "Operations Research", author: "Kanti Swarup", details: "B.Sc. | Maths | 3rd Year", price: 440, publisher: "Sultan Chand & Sons", description: "Techniques for optimization and decision making.", seed: "bsc_math_y3_or" },
+      { title: "Dynamics", author: "M. Ray", details: "B.Sc. | Maths | 3rd Year", price: 370, publisher: "S. Chand", description: "Study of motion of particles and rigid bodies.", seed: "bsc_math_y3_dyn" },
+      { title: "Statistics", author: "S.C. Gupta", details: "B.Sc. | Maths | 3rd Year", price: 490, publisher: "Sultan Chand & Sons", description: "Fundamentals of probability and statistical methods.", seed: "bsc_math_y3_stat" },
+
+      // --- BSc ZOOLOGY ---
+      { title: "Invertebrate Zoology", author: "R.L. Kotpal", details: "B.Sc. | Zoology | 1st Year", price: 550, publisher: "Rastogi Publications", description: "A comprehensive guide to the classification and characteristics of non-chordates.", seed: "bsc_zoo_y1_invert" },
+      { title: "Cell & Molecular Biology", author: "P.S. Verma, V.K. Agarwal", details: "B.Sc. | Zoology | 1st Year", price: 600, publisher: "S. Chand", description: "Covers cell structure, genetics, and molecular mechanisms.", seed: "bsc_zoo_y1_cell" },
+      { title: "Chordate Zoology", author: "R.L. Kotpal", details: "B.Sc. | Zoology | 2nd Year", price: 580, publisher: "Rastogi Publications", description: "Detailed study of the phylum Chordata, from protochordates to mammals.", seed: "bsc_zoo_y2_chord" },
+      { title: "Animal Physiology & Biochemistry", author: "H.R. Singh", details: "B.Sc. | Zoology | 2nd Year", price: 480, publisher: "S. Chand", description: "Explores the physiological processes and biochemical pathways in animals.", seed: "bsc_zoo_y2_physio" },
+      { title: "Kuby Immunology", author: "Owen, Punt, Stranford", details: "B.Sc. | Zoology | 3rd Year", price: 750, publisher: "W. H. Freeman", description: "A leading textbook on the principles of immunology.", seed: "bsc_zoo_y3_immuno" },
+      { title: "Economic Zoology", author: "G.S. Shukla, V.B. Upadhyay", details: "B.Sc. | Zoology | 3rd Year", price: 350, publisher: "Rastogi Publications", description: "Focuses on the commercial and economic importance of various animal species.", seed: "bsc_zoo_y3_ecozoo" },
+
+      // --- BSc BOTANY ---
+      { title: "A Textbook of Botany", author: "Singh, Pande, Jain", details: "B.Sc. | Botany | 1st Year", price: 620, publisher: "Rastogi Publications", description: "Covers Algae, Fungi, Bryophytes, and Plant Pathology.", seed: "bsc_bot_y1_textbook" },
+      { title: "Plant Physiology", author: "Taiz and Zeiger", details: "B.Sc. | Botany | 2nd Year", price: 800, publisher: "Sinauer Associates", description: "An authoritative text on the functioning of plants.", seed: "bsc_bot_y2_physio" },
+      { title: "Plant Anatomy", author: "B.P. Pandey", details: "B.Sc. | Botany | 3rd Year", price: 400, publisher: "S. Chand", description: "Detailed study of the internal structure of plants.", seed: "bsc_bot_y3_anatomy" },
+      { title: "Plant Systematics", author: "Gurcharan Singh", details: "B.Sc. | Botany | 3rd Year", price: 550, publisher: "CRC Press", description: "Principles and practices of plant classification and taxonomy.", seed: "bsc_bot_y3_system" },
+
+      // --- BSc BIOTECHNOLOGY ---
+      { title: "Concepts of Genetics", author: "Klug, Cummings", details: "B.Sc. | Biotechnology | 1st Year", price: 720, publisher: "Pearson", description: "A comprehensive introduction to the principles of genetics.", seed: "bsc_biotech_y1_gen" },
+      { title: "Recombinant DNA Technology", author: "James D. Watson", details: "B.Sc. | Biotechnology | 2nd Year", price: 680, publisher: "W. H. Freeman", description: "Key techniques and applications of genetic engineering.", seed: "bsc_biotech_y2_rdt" },
+      { title: "Plant Biotechnology", author: "B.D. Singh", details: "B.Sc. | Biotechnology | 3rd Year", price: 510, publisher: "Kalyani Publishers", description: "Methods and applications of biotechnology in plant sciences.", seed: "bsc_biotech_y3_plant" },
+      { title: "Industrial Biotechnology", author: "A.H. Patel", details: "B.Sc. | Biotechnology | 3rd Year", price: 490, publisher: "Macmillan", description: "Application of biotechnological processes in industries.", seed: "bsc_biotech_y3_ind" },
+
+      // --- BSc MICROBIOLOGY ---
+      { title: "Microbiology: An Introduction", author: "Tortora, Funke, Case", details: "B.Sc. | Microbiology | 1st Year", price: 780, publisher: "Pearson", description: "A foundational text covering all aspects of microbiology.", seed: "bsc_micro_y1_intro" },
+      { title: "Prescott's Microbiology", author: "Willey, Sherwood, Woolverton", details: "B.Sc. | Microbiology | 2nd Year", price: 850, publisher: "McGraw Hill", description: "A detailed textbook for advanced microbiology students.", seed: "bsc_micro_y2_prescott" },
+      { title: "Food Microbiology", author: "W.C. Frazier", details: "B.Sc. | Microbiology | 3rd Year", price: 600, publisher: "Tata McGraw-Hill", description: "Microorganisms in food production, spoilage, and safety.", seed: "bsc_micro_y3_food" },
+
+      // --- BSc COMPUTER SCIENCE ---
+      { title: "Let Us C", author: "Yashavant Kanetkar", details: "B.Sc. | Computer Science | 1st Year", price: 300, publisher: "BPB Publications", description: "A classic book for learning C programming from scratch.", seed: "bsc_cs_y1_c" },
+      { title: "Operating System Concepts", author: "Silberschatz, Galvin, Gagne", details: "B.Sc. | Computer Science | 1st Year", price: 650, publisher: "Wiley", description: "The 'dinosaur book' - a standard text for operating systems.", seed: "bsc_cs_y1_os" },
+      { title: "Java: The Complete Reference", author: "Herbert Schildt", details: "B.Sc. | Computer Science | 2nd Year", price: 700, publisher: "McGraw Hill", description: "Comprehensive coverage of the Java programming language.", seed: "bsc_cs_y2_java" },
+      { title: "Software Engineering", author: "Ian Sommerville", details: "B.Sc. | Computer Science | 2nd Year", price: 580, publisher: "Pearson", description: "A practical approach to software development principles.", seed: "bsc_cs_y2_se" },
+      { title: "Programming with Python", author: "John V. Guttag", details: "B.Sc. | Computer Science | 3rd Year", price: 450, publisher: "PHI Learning", description: "Introduction to computation and programming using Python.", seed: "bsc_cs_y3_python" },
+
+      // --- BSc STATISTICS ---
+      { title: "Introduction to Probability and Statistics", author: "Mendenhall, Beaver, Beaver", details: "B.Sc. | Statistics | 1st Year", price: 550, publisher: "Cengage", description: "Covers descriptive statistics and probability theory.", seed: "bsc_stat_y1_prob" },
+      { title: "Applied Statistics", author: "S.C. Gupta, V.K. Kapoor", details: "B.Sc. | Statistics | 2nd Year", price: 600, publisher: "Sultan Chand & Sons", description: "Focuses on the application of statistical methods.", seed: "bsc_stat_y2_applied" },
+      { title: "Design and Analysis of Experiments", author: "Douglas C. Montgomery", details: "B.Sc. | Statistics | 3rd Year", price: 750, publisher: "Wiley", description: "A key text for understanding experimental design.", seed: "bsc_stat_y3_doe" },
+
+      // --- BA/BSc PSYCHOLOGY ---
+      { title: "Introduction to Psychology", author: "Morgan & King", details: "B.A./B.Sc. | Psychology | 1st Year", price: 500, publisher: "Tata McGraw-Hill", description: "A foundational text covering basic psychological processes.", seed: "ba_psy_y1_intro" },
+      { title: "Abnormal Psychology", author: "James N. Butcher", details: "B.A./B.Sc. | Psychology | 2nd Year", price: 650, publisher: "Pearson", description: "An in-depth look at psychological disorders.", seed: "ba_psy_y2_abnormal" },
+      { title: "Psychological Testing", author: "Anastasi & Urbina", details: "B.A./B.Sc. | Psychology | 3rd Year", price: 580, publisher: "Pearson", description: "Covers the principles and applications of psychometrics.", seed: "ba_psy_y3_testing" },
+
+      // --- BA ENGLISH LITERATURE ---
+      { title: "A Glossary of Literary Terms", author: "M.H. Abrams", details: "B.A. | English | 1st Year", price: 350, publisher: "Cengage", description: "An essential reference for any English literature student.", seed: "ba_eng_y1_glossary" },
+      { title: "The Norton Anthology of English Literature", author: "Stephen Greenblatt", details: "B.A. | English | 2nd Year", price: 1200, publisher: "W. W. Norton", description: "A comprehensive collection of English literature from the Romantic period onwards.", seed: "ba_eng_y2_norton" },
+      { title: "Indian Writing in English", author: "K.R. Srinivasa Iyengar", details: "B.A. | English | 3rd Year", price: 450, publisher: "Sterling Publishers", description: "A critical survey of Indian literature written in English.", seed: "ba_eng_y3_iwe" },
+
+      // --- BA POLITICAL SCIENCE ---
+      { title: "An Introduction to Political Theory", author: "O.P. Gauba", details: "B.A. | Political Science | 1st Year", price: 400, publisher: "Mayur Paperbacks", description: "Covers the foundational concepts of political science.", seed: "ba_pol_y1_gauba" },
+      { title: "Indian Polity", author: "M. Laxmikanth", details: "B.A. | Political Science | 2nd Year", price: 600, publisher: "McGraw Hill", description: "A comprehensive text on the Indian political system.", seed: "ba_pol_y2_laxmi" },
+      { title: "A History of Political Thought", author: "Subrata Mukherjee", details: "B.A. | Political Science | 3rd Year", price: 550, publisher: "PHI Learning", description: "From Plato to Marx, a survey of Western political thinkers.", seed: "ba_pol_y3_plato" },
+
+      // --- BA/BSc GEOGRAPHY ---
+      { title: "Physical Geography", author: "Savindra Singh", details: "B.A./B.Sc. | Geography | 1st Year", price: 520, publisher: "Pravalika Publications", description: "Covers geomorphology, climatology, and oceanography.", seed: "ba_geo_y1_physical" },
+      { title: "Human Geography", author: "Majid Husain", details: "B.A./B.Sc. | Geography | 2nd Year", price: 480, publisher: "Rawat Publications", description: "Explores the relationship between people and their environments.", seed: "ba_geo_y2_human" },
+      { title: "Geographical Thought", author: "R.D. Dikshit", details: "B.A./B.Sc. | Geography | 3rd Year", price: 410, publisher: "PHI Learning", description: "A critical review of the evolution of geographical ideas.", seed: "ba_geo_y3_thought" },
+
+      // --- BA HISTORY ---
+      { title: "India's Ancient Past", author: "R.S. Sharma", details: "B.A. | History | 1st Year", price: 350, publisher: "Oxford University Press", description: "A detailed account of ancient Indian history.", seed: "ba_hist_y1_ancient" }, 
+      { title: "History of Medieval India", author: "Satish Chandra", details: "B.A. | History | 2nd Year", price: 400, publisher: "Orient Blackswan", description: "Covers the Sultanate and Mughal periods.", seed: "ba_hist_y2_medieval" },
+      { title: "India's Struggle for Independence", author: "Bipan Chandra", details: "B.A. | History | 3rd Year", price: 420, publisher: "Penguin", description: "A comprehensive narrative of the Indian freedom struggle.", seed: "ba_hist_y3_modern" },
+
+      // --- B.Com COURSES ---
+      { title: "Business Law", author: "N.D. Kapoor", details: "B.Com. | BADM | 1st Year", price: 450, publisher: "Sultan Chand & Sons", description: "Covers Indian Contract Act, Sale of Goods Act, and other business legislations.", seed: "bcom_badm_y1_law" },
+      { title: "Financial Management", author: "I.M. Pandey", details: "B.Com. | EAFM | 2nd Year", price: 650, publisher: "Vikas Publishing", description: "Principles and practices of financial management in business.", seed: "bcom_eafm_y2_fm" },
+      { title: "Principles of Management", author: "P.C. Tripathi, P.N. Reddy", details: "BBA | Business Administration | 1st Year", price: 480, publisher: "Tata McGraw-Hill", description: "Fundamental concepts of management and organizational behavior.", seed: "bba_y1_mgmt" },
+      { title: "Marketing Management", author: "Philip Kotler", details: "BBA | Business Administration | 2nd Year", price: 750, publisher: "Pearson", description: "The authoritative text on marketing principles and strategies.", seed: "bba_y2_mktg" }
+    ];
+
+    // 2. State Variables
+    let currentPage = 0;
+    const booksPerPage = 6; // Load 6 books at a time after initial load
+    const initialLoad = 12; // Load 12 books initially
+    let isLoading = false;
+    let allBooksLoaded = false;
+
+    // 3. DOM Elements (Main Grid)
+    const bookGrid = document.getElementById('book-grid');
+    const loader = document.getElementById('loader');
+    const endOfResults = document.getElementById('end-of-results');
+    const bookGridSkeleton = document.getElementById('book-grid-skeleton'); // NEW
+    const bookLoadingShine = document.getElementById('book-loading-shine'); // NEW
+    const noResults = document.getElementById('no-results');
+
+    // NEW: Color pairs for dynamic book placeholders
+    const placeholderColors = [
+        { bg: 'A9C9FF', text: '003366' }, // Light Blue / Dark Blue
+        { bg: 'E0BBE4', text: '4B0082' }, // Light Purple / Indigo
+        { bg: 'B2DFDB', text: '004D40' }, // Light Teal / Dark Teal
+        { bg: 'FFD54F', text: 'BF360C' }, // Amber / Deep Orange
+        { bg: 'C8E6C9', text: '1B5E20' }, // Light Green / Dark Green
+        { bg: 'F8BBD0', text: '880E4F' }, // Light Pink / Dark Magenta
+        { bg: 'D7CCC8', text: '3E2723' }  // Light Brown / Dark Brown
+    ];
+
+    function createBookCardHTML(book, index) {
+      const colorPair = placeholderColors[index % placeholderColors.length];
+      
+      // To ensure a consistent font size on the placeholder image, we must send
+      // a string of the exact same length for every book.
+      const targetLength = 25;
+      let placeholderTitle = book.title;
+
+      if (placeholderTitle.length > targetLength) {
+        // If the title is too long, truncate it and add "..."
+        placeholderTitle = placeholderTitle.substring(0, targetLength - 3) + '...';
+      } else {
+        // If the title is too short, pad it with spaces to reach the target length
+        placeholderTitle = placeholderTitle.padEnd(targetLength, ' ');
+      }
+      const encodedTitle = encodeURIComponent(placeholderTitle);
+
+      return `
+        <div 
+          class="book-card w-full sm:w-[260px] bg-white rounded-[18px] p-4 shadow-lg flex flex-col gap-3 transition-all duration-200 cursor-pointer hover:shadow-xl" 
+          style="opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease;"
+          data-book-index="${index}"
+        >
+          <!-- Image --><div class="w-full h-40 rounded-xl overflow-hidden flex items-center justify-center bg-gradient-to-b from-[#e6eef8] to-[#eaf3fb] pointer-events-none">
+            <img 
+              src="https://placehold.co/228x160/${colorPair.bg}/${colorPair.text}?text=${encodedTitle}&font=inter" 
+              alt="Book cover for ${book.title}"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <!-- Content --><div class="pointer-events-none">
+            <div class="font-bold text-base text-[#0b1226] truncate" title="${book.title}">${book.title}</div>
+            <div class="text-xs text-[#6b7380] leading-snug">
+              By ${book.author}<br>
+              <!-- This now shows 'Subject | B.Sc X Year' --><span class="text-xs text-[#7a8290]">${book.details}</span>
+            </div>
+          </div>
+          <!-- Bottom Row --><div class="flex items-center justify-between mt-auto pt-2 pointer-events-none">
+            <div class="font-bold text-lg text-[#111827]">₹${book.price}</div>
+            <button class="bg-gradient-to-b from-[#dff0ff] to-[#e7f5ff] border border-[rgba(36,120,215,0.15)] px-3 py-1.5 rounded-full text-sm text-[#0f66cc] font-semibold shadow-md transition-all duration-200">
+              Buy Now
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // NEW: Function to render a list of books
+    function renderBooks(bookList) {
+      bookGrid.innerHTML = ''; // Clear grid
+      
+      if (bookList.length === 0) {
+        noResults.classList.remove('hidden');
+      } else {
+        noResults.classList.add('hidden');
+      }
+      
+      let cardsHtml = '';
+      bookList.forEach(book => {
+        const originalIndex = allBooks.indexOf(book);
+        cardsHtml += createBookCardHTML(book, originalIndex);
+      });
+
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = cardsHtml;
+      
+      Array.from(tempDiv.children).forEach((card, index) => {
+        bookGrid.appendChild(card);
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 50); // Faster animation for search
+      });
+    }
+    
+    // NEW: Search filter function
+    function handleSearchFilter() {
+      applyFiltersAndSearch();
+    }
+
+    // NEW: Main function to apply all filters
+    function applyFiltersAndSearch() {
+      const query = input.value.toLowerCase().trim();
+      const stream = streamFilter.value;
+      const subject = subjectFilter.value;
+      const year = yearFilter.value;
+
+      // Check if any filter is active
+      const isFiltering = (query.length > 0 || stream !== 'all' || subject !== 'all' || year !== 'all');
+
+      if (isFiltering) {
+        // Stop infinite scroll
+        window.removeEventListener('scroll', handleScroll);
+        loader.classList.add('hidden');
+        endOfResults.classList.add('hidden');
+
+        // Filter the books
+        const results = allBooks.filter(book => {
+          const queryMatch = (
+            book.title.toLowerCase().includes(query) ||
+            book.author.toLowerCase().includes(query) ||
+            book.description.toLowerCase().includes(query) ||
+            book.publisher.toLowerCase().includes(query)
+          );
+          const streamMatch = (stream === 'all') || book.details.includes(stream);
+          const subjectMatch = (subject === 'all') || book.details.includes(subject);
+          const yearMatch = (year === 'all') || book.details.includes(year);
+          
+          return queryMatch && streamMatch && subjectMatch && yearMatch;
+        });
+        
+        marketplaceTitle.textContent = `Listings (${results.length} found)`;
+        renderBooks(results);
+
+        // NEW: Render suggestions
+        renderSuggestions(results);
+        
+      } else {
+        // Restore infinite scroll (no filters active)
+        marketplaceTitle.textContent = 'B.Sc. Listings (Rajasthan University)';
+        noResults.classList.add('hidden');
+        bookGridSkeleton.classList.remove('hidden'); // Show skeleton again
+        bookLoadingShine.classList.remove('hidden'); // Show shine again
+        bookGrid.innerHTML = '';
+        currentPage = 0;
+        allBooksLoaded = false;
+        isLoading = false;
+        loadMoreBooks(initialLoad);
+        window.addEventListener('scroll', handleScroll, { passive: true }); // Add listener back
+        // NEW: Hide suggestions
+        suggestionsContainer.classList.add('hidden');
+      }
+      
+      // Update the main title based on filters
+      updateMarketplaceTitle();
+    }
+
+    // 5. Load More Books Function
+    function loadMoreBooks(count) {
+      if (isLoading || allBooksLoaded) return;
+      isLoading = true;
+      loader.classList.remove('hidden');
+      bookGridSkeleton.classList.remove('hidden'); // Ensure skeleton is visible during loading
+      bookLoadingShine.classList.remove('hidden'); // Ensure shine is visible during loading
+
+      setTimeout(() => {
+        const start = currentPage * booksPerPage;
+        const end = (currentPage === 0) ? initialLoad : start + count;
+        
+        const booksToLoad = allBooks.slice(start, end);
+
+        if (booksToLoad.length === 0) {
+          allBooksLoaded = true;
+          loader.classList.add('hidden');
+          endOfResults.classList.remove('hidden');
+          bookGridSkeleton.classList.add('hidden'); // Hide skeleton if no books
+          bookLoadingShine.classList.add('hidden'); // Hide shine if no books
+          window.removeEventListener('scroll', handleScroll);
+          return;
+        }
+
+        let cardsHtml = '';
+        booksToLoad.forEach(book => {
+          // Pass the original index from `allBooks`
+          const originalIndex = allBooks.indexOf(book);
+          cardsHtml += createBookCardHTML(book, originalIndex);
+        });
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = cardsHtml;
+        
+        Array.from(tempDiv.children).forEach((card, index) => {
+          bookGrid.appendChild(card);
+          setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+          }, index * 100);
+        });
+
+        // NEW: After adding new cards to the DOM, tell the observer to watch them.
+        if (window.observeBookCards) {
+            window.observeBookCards();
+        }
+
+        // NEW (FIX): Observe the initially loaded books as well
+        if (window.observeBookCards) {
+            window.observeBookCards();
+        }
+        
+        currentPage = (currentPage === 0) ? (initialLoad / booksPerPage) : currentPage + 1;
+        bookGridSkeleton.classList.add('hidden'); // Hide skeleton once real books are loaded
+        bookLoadingShine.classList.add('hidden'); // Hide shine once real books are loaded
+        loader.classList.add('hidden');
+        isLoading = false;
+      }, 800);
+    }
+
+    // 6. Scroll Event Handler
+    function handleScroll() {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        loadMoreBooks(booksPerPage);
+      }
+    }
+
+    // 7. Initial Load & Event Listener
+    document.addEventListener('DOMContentLoaded', () => {
+      // NEW: Initial population of subject filter
+      const pageLoader = document.getElementById('page-loader');
+
+      backButton.addEventListener('click', (e) => {
+        // NEW: Check if the back button is being used to close the search
+        if (backButton.getAttribute('data-action') === 'close-search') {
+          e.preventDefault();
+          wrap.classList.remove('open');
+          headerContent.classList.remove('search-active');
+          backButton.removeAttribute('data-action');
+          if (input.value.trim() !== '') {
+            input.value = '';
+            applyFiltersAndSearch();
+          }
+          suggestionsContainer.classList.add('hidden');
+        } else {
+          // Original functionality: go back to index.html
+          e.preventDefault();
+              // Show loader immediately
+              pageLoader.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+              // Navigate after a short delay to allow loader to render
+              setTimeout(() => {
+                  window.location.href = 'index.html';
+              }, 50);
+        }
+      });
+
+      updateSubjectFilter(); 
+      updateYearFilter(); // NEW: Also initialize year filter
+      
+      loadMoreBooks(initialLoad); 
+      // Add passive: true for performance
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    });
+
+    // --- NEW: Dynamic Background Glow on Scroll ---
+    function setupBackgroundGlowObserver() {
+      const glowElement = document.getElementById('background-glow');
+      if (!glowElement) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const card = entry.target;
+              const bookIndex = parseInt(card.dataset.bookIndex, 10);
+
+              if (!isNaN(bookIndex)) {
+                const colorPair = placeholderColors[bookIndex % placeholderColors.length];
+                const glowColorHex = `#${colorPair.bg}`;
+                glowElement.style.setProperty('--glow-color', glowColorHex);
+              }
+            }
+          });
+        },
+        {
+          root: null, // observes intersections relative to the viewport
+          rootMargin: '-50% 0px -50% 0px', // Triggers when the card is in the vertical center of the screen
+          threshold: 0,
+        }
+      );
+
+      // We need to observe the cards after they are loaded.
+      // We will call this from the loadMoreBooks function.
+      window.observeBookCards = () => document.querySelectorAll('.book-card').forEach(card => observer.observe(card));
+    }
+
+    // --- NEW: Connection Status Handler ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const connectionAlert = document.getElementById('connection-alert');
+
+        const updateConnectionStatus = () => {
+            if (navigator.onLine) {
+                connectionAlert.classList.remove('show');
+            } else {
+                connectionAlert.classList.add('show');
+            }
+        };
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+
+        // Initial check on page load
+        updateConnectionStatus();
+
+        // NEW (FIX): Observe the initially loaded books as well
+        if (window.observeBookCards) window.observeBookCards();
+
+
+        if (window.observeBookCards) {
+            // Use a small timeout to ensure cards are in the DOM before observing
+            setTimeout(() => {
+                window.observeBookCards();
+            }, 200);
+        }
+        // Setup the observer for the background glow effect
+        setupBackgroundGlowObserver();
+    });
+
+    // ============================================================
+    // Book Detail Modal Logic
+    // ============================================================
+
+    // Event delegation for book card clicks
+    function handleGridClick(e) {
+      const card = e.target.closest('.book-card');
+      if (card) {
+        const index = card.dataset.bookIndex;
+        if (index !== null) {
+            const book = allBooks[index];
+            // Show out of stock popup instead of checkout
+            showOutOfStockPopup();
+        }
+      }
+    }
+    
+    // Out of Stock Popup Function
+    function showOutOfStockPopup() {
+        const popup = document.createElement('div');
+        popup.className = 'fixed inset-0 z-[9999] flex items-center justify-center';
+        popup.style.cssText = 'background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); animation: fadeIn 0.2s ease;';
+        
+        popup.innerHTML = `
+            <div style="background: white; border-radius: 20px; padding: 40px 30px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); animation: slideUp 0.2s ease;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ff6b6b, #ee5a6f); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <h2 style="font-size: 1.8rem; font-weight: 800; color: #1f2937; margin-bottom: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Out of Stock</h2>
+                <p style="font-size: 1rem; color: #6b7280; line-height: 1.7; margin-bottom: 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Thank you for your interest! We apologize, but this book is currently out of stock. We are working to restock it soon. Please wait and check back. Thank you for your patience!</p>
+                <button onclick="this.closest('div').parentElement.remove()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px 40px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: all 0.2s; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(59, 130, 246, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(59, 130, 246, 0.4)'">Got It</button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        popup.addEventListener('click', (e) => { if (e.target === popup) popup.remove(); });
+    }
+    
+    bookGrid.addEventListener('click', handleGridClick);
+    
+  </script>
+
+  <!-- 
+    ============================================================
+    UNIFIED SCRIPT MODULE (from index.html)
+    ============================================================
+  -->
+  <script type="module">
+    const auth = firebase.auth();
+    window.currentUser = null;
+
+    // --- UTILITY FUNCTIONS ---
+    function getFormData(form) {
+        const formData = new FormData(form);
+        const data = {};
+        for (let [key, value] of formData.entries()) { data[key] = value; }
+        return data;
+    }
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast show ${isError ? 'error' : ''}`;
+        setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    }
+
+    function setButtonLoading(button, isLoading, originalText) {
+        if (isLoading) {
+            if (!button.dataset.originalText) { button.dataset.originalText = originalText; }
+            button.disabled = true;
+            button.classList.add('btn-loading');
+            button.textContent = originalText.replace('Now', '...').replace('Order', 'Placing...');
+        } else {
+            button.disabled = false;
+            button.classList.remove('btn-loading');
+            button.textContent = button.dataset.originalText || originalText;
+        }
+    }
+
+    function triggerConfetti() {
+        const duration = 3 * 1000, animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10001 };
+        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+        const interval = setInterval(() => {
+            const timeLeft = animationEnd - Date.now();
+            if (timeLeft <= 0) return clearInterval(interval);
+            const particleCount = 50 * (timeLeft / duration);
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+        }, 250);
+    }
+
+    function showSuccessModal(title, productName, message) {
+        const modal = document.getElementById('successModal');
+        document.getElementById('successTitle').textContent = title;
+        document.getElementById('successProductName').textContent = `Product: ${productName}`;
+        document.getElementById('successMessage').textContent = message;
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        setTimeout(triggerConfetti, 300);
+        const closeModal = () => {
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+            document.querySelectorAll('form').forEach(form => form.reset());
+            ModalManager.close('checkoutModal');
+        };
+        document.getElementById('successContinueBtn').onclick = closeModal;
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+        setTimeout(() => { if (modal.classList.contains('show')) closeModal(); }, 15000);
+    }
+
+    async function saveToFirestore(collection, data) {
+        const docData = { ...data, ownerUid: window.currentUser?.uid || null, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+        const docRef = await db.collection(collection).add(docData);
+        return docRef;
+    }
+
+    // --- MODAL MANAGER ---
+    const ModalManager = {
+        modals: {},
+        init() {
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                const modalId = modal.id;
+                if (!modalId) return;
+                this.modals[modalId] = modal;
+                modal.querySelector('.modal-backdrop')?.addEventListener('click', () => this.close(modalId));
+                modal.addEventListener('click', (e) => { if (e.target.closest('[id^="close"]')) this.close(modalId); });
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const visibleModal = document.querySelector('.modal-overlay.is-visible');
+                    if (visibleModal) this.close(visibleModal.id);
+                }
+            });
+        },
+        open(modalId) {
+            const modal = this.modals[modalId];
+            if (!modal) return;
+            document.body.classList.add('modal-open');
+            modal.classList.add('is-visible');
+        },
+        close(modalId) {
+            const modal = this.modals[modalId];
+            if (!modal) return;
+            modal.classList.remove('is-visible');
+            if (!document.querySelector('.modal-overlay.is-visible')) {
+                document.body.classList.remove('modal-open');
+            }
+        }
+    };
+    window.ModalManager = ModalManager;
+
+    // --- AUTH LOGIC ---
+    const authViewContainer = document.getElementById('auth-view-container');
+    function renderAuthView(view = 'login') {
+        authViewContainer.innerHTML = view === 'login' ? `
+            <form id="authForm" class="space-y-4">
+                <input type="email" name="email" required placeholder="Email Address" class="w-full p-3 border border-gray-300 rounded-md"/>
+                <input type="password" name="password" required placeholder="Password" class="w-full p-3 border border-gray-300 rounded-md"/>
+                <button type="submit" class="w-full h-12 text-lg bg-blue-600 text-white rounded-lg font-semibold button-animation">Login</button>
+                <p class="text-center text-sm">Don't have an account? <button type="button" id="showRegister" class="font-semibold text-blue-600 hover:underline">Register</button></p>
+            </form>` : `
+            <form id="authForm" class="space-y-4">
+                <input type="email" name="email" required placeholder="Email Address" class="w-full p-3 border border-gray-300 rounded-md"/>
+                <input type="password" name="password" required placeholder="Password" class="w-full p-3 border border-gray-300 rounded-md"/>
+                <button type="submit" class="w-full h-12 text-lg bg-green-500 text-white rounded-lg font-semibold button-animation">Register</button>
+                <p class="text-center text-sm">Already have an account? <button type="button" id="showLogin" class="font-semibold text-blue-600 hover:underline">Login</button></p>
+            </form>`;
+        document.getElementById('showRegister')?.addEventListener('click', () => renderAuthView('register'));
+        document.getElementById('showLogin')?.addEventListener('click', () => renderAuthView('login'));
+    }
+
+    auth.onAuthStateChanged(user => {
+        window.currentUser = user;
+        if (user) {
+            ModalManager.close('authModal');
+        }
+    });
+
+    // --- CHECKOUT MODAL RENDERER ---
+    window.renderCheckoutModal = function(book) {
+        const checkoutModalContent = document.getElementById('checkoutModalContent');
+        const getNextDeliveryDates = () => {
+            const dates = []; let today = new Date();
+            for (let i = 0; i < 14 && dates.length < 2; i++) {
+                let nextDate = new Date(today); nextDate.setDate(today.getDate() + i);
+                const day = nextDate.getDay(); if (day === 1 || day === 4) { dates.push(nextDate.toDateString()); }
+            } return dates;
+        };
+        const deliveryDates = getNextDeliveryDates();
+        checkoutModalContent.innerHTML = `
+            <div class="flex items-center justify-between p-6 border-b sticky top-0 bg-white/80 backdrop-blur-md z-10">
+                <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path><path d="m9 18 3-3 3 3"></path></svg>
+                    <div><h2 class="text-2xl font-bold">Secure Your Item</h2><p class="text-gray-600">Fill in your details to complete the order</p></div>
+                </div>
+                <button id="closeCheckoutBtn" class="bg-gray-100 rounded-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition-all button-animation"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            </div>
+            <div class="flex-grow p-8 overflow-y-auto">
+                <form id="checkoutForm" class="grid md:grid-cols-2 gap-x-12 gap-y-8">
+                    <div class="space-y-6 md:border-r md:pr-12"><h3 class="text-xl font-bold">Order Summary</h3>
+                        <div class="bg-gray-50 border rounded-xl p-4 space-y-2"><h4 class="font-bold text-lg">${book.title}</h4><p class="text-sm text-gray-500">by ${book.author || 'N/A'}</p></div> 
+                        <div class="space-y-2 border-t pt-4"><div class="flex justify-between"><span>Item Price</span><span>₹${book.price}</span></div><div class="flex justify-between items-center"><span>Delivery Charges</span><div><span class="line-through text-gray-500 mr-2">₹70</span><span class="text-green-600 font-bold">FREE</span></div></div><div class="flex justify-between font-bold text-lg border-t pt-2 mt-2"><span>Total Amount</span><span>₹${book.price}</span></div></div>
+                    </div>
+                    <div class="space-y-4">
+                        <div><label class="font-semibold text-gray-700">Full Name</label><input name="fullName" required placeholder="Enter your full name" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="name"></div>
+                        <div><label class="font-semibold text-gray-700">Phone Number / WhatsApp</label><input name="phone" required placeholder="For delivery updates" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label class="font-semibold text-gray-700">Email Address</label><input name="email" type="email" required placeholder="For order confirmation" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label class="font-semibold text-gray-700">Quantity</label><input name="quantity" type="number" required placeholder="e.g. 1" value="1" min="1" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></div> 
+                        <div><label class="font-semibold text-gray-700">Delivery Location (College)</label><select name="deliveryLocation" class="w-full p-2 border border-gray-300 rounded-md"><option>Library Entrance</option><option>Cafeteria</option><option>Main Gate</option></select></div>
+                        <div><label class="font-semibold text-gray-700">Delivery Date</label><div class="grid grid-cols-2 gap-4">${deliveryDates.map(date => `<label class="flex-1"><input type="radio" name="deliveryDate" value="${date}" required class="sr-only peer"><div class="p-3 text-center border rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 cursor-pointer">${date}</div></label>`).join('')}</div></div>
+                        <div><label class="font-semibold text-gray-700">Payment Method</label><div class="grid grid-cols-2 gap-4"><label class="flex-1"><input type="radio" name="paymentMethod" value="POD" checked class="sr-only peer"><div class="p-3 text-center border rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 cursor-pointer">Pay on Delivery</div></label><label class="flex-1"><input type="radio" name="paymentMethod" value="Online" class="sr-only peer"><div class="p-3 text-center border rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 cursor-pointer">Pay Online</div></label></div></div>
+                        <div class="pt-4 space-y-2"><label class="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" required>I confirm the details are correct.</label><label class="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" required>I agree to NexBook’s safety & privacy guidelines.</label></div>
+                        <button type="submit" class="w-full h-12 text-lg bg-blue-600 text-white rounded-lg font-semibold button-animation">Place Order Now</button>
+                        <button type="button" id="addToBackpackBtnCheckout" class="w-full h-12 mt-3 text-lg bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-lg font-semibold flex items-center justify-center button-animation">Add to Backpack</button>
+                    </div>
+                </form>
+            </div>`;
+    }
+
+    // --- FORM SUBMISSION HANDLER ---
+    document.body.addEventListener('submit', async function(event) {
+        if (event.target.id === 'checkoutForm') {
+            event.preventDefault();
+            if (!window.currentUser) {
+                showToast('Please log in to place an order.', true);
+                renderAuthView('login');
+                ModalManager.open('authModal');
+                return;
+            }
+            const form = event.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            setButtonLoading(submitBtn, true, originalText);
+            try {
+                const formData = getFormData(form);
+                const summary = form.querySelector('.bg-gray-50');
+                const itemName = summary?.querySelector('h4')?.textContent || 'Unknown Item';
+                const priceElement = form.querySelector('.flex.justify-between.font-bold.text-lg span:last-child');
+                const itemPrice = priceElement ? parseInt(priceElement.textContent.replace('₹', '')) : 0;
+                const orderData = {
+                    item: itemName,
+                    price: itemPrice,
+                    buyerName: formData.fullName,
+                    buyerPhone: formData.phone, // Use buyerPhone
+                    buyerEmail: formData.email, // Use buyerEmail
+                    ...formData,
+                    type: 'Purchase', status: 'Pending'
+                };
+                await saveToFirestore('orders', orderData);
+                ModalManager.close('checkoutModal');
+                showSuccessModal('Order Confirmed!', itemName, 'Your order has been placed and will be processed shortly.');
+            } catch (error) {
+                showToast('Order submission failed. Please try again.', true);
+            } finally {
+                setButtonLoading(submitBtn, false, originalText);
+            }
+        } else if (event.target.id === 'authForm') {
+            event.preventDefault();
+            const form = event.target;
+            const email = form.email.value;
+            const password = form.password.value;
+            const isRegister = form.querySelector('button[type="submit"]').textContent.includes('Register');
+            try {
+                if (isRegister) {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                    showToast('Registration successful!');
+                } else {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    showToast('Login successful!');
+                }
+            } catch (error) {
+                showToast(error.message, true);
+            }
+        }
+    });
+
+    // --- INITIALIZE ---
+    document.addEventListener('DOMContentLoaded', () => {
+        ModalManager.init();
+    });
+  </script>
+
+</body>
+</html>

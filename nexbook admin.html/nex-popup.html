@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEX | Private Access</title>
+    
+    <!-- Fonts: Playfair Display (Serif/Luxury) and Plus Jakarta Sans (Modern/UI) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        luxury: {
+                            gold: '#D4AF37',
+                            goldLight: '#F3E5AB',
+                            charcoal: '#0a0a0a',
+                            glass: 'rgba(255, 255, 255, 0.03)',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 1.2s ease-out forwards',
+                        'slide-up': 'slideUp 0.8s ease-out 0.2s forwards',
+                        'shimmer': 'shimmer 2s linear infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #050505;
+            overflow-x: hidden;
+        }
+
+        /* Subtle Noise Texture Overlay */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Custom Selection Color */
+        ::selection {
+            background: rgba(212, 175, 55, 0.3);
+            color: white;
+        }
+
+        /* Input Autofill Styles Override */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #0a0a0a inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        /* Smooth Glow Animation */
+        .glow-point {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            transition: transform 0.2s ease-out;
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex flex-col items-center justify-center relative antialiased selection:bg-luxury-gold selection:text-black">
+
+    <!-- Background Canvas for Particles -->
+    <canvas id="bgCanvas" class="fixed top-0 left-0 w-full h-full z-0"></canvas>
+    
+    <!-- Noise Texture -->
+    <div class="noise-overlay"></div>
+
+    <!-- Mouse Follower Glow -->
+    <div id="glow" class="glow-point fixed"></div>
+
+    <!-- Main Content Wrapper -->
+    <main class="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
+        
+        <!-- Logo / Brand -->
+        <div class="mb-12 opacity-0 animate-fade-in text-center">
+            <div class="inline-flex items-center justify-center w-12 h-12 mb-4 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
+                <i data-lucide="gem" class="w-5 h-5 text-luxury-gold"></i>
+            </div>
+            <h2 class="font-sans text-xs uppercase tracking-[0.3em] text-gray-400">Restricted Environment</h2>
+        </div>
+
+        <!-- Card Container -->
+        <div class="w-full bg-luxury-charcoal/50 backdrop-blur-xl border border-white/10 p-8 md:p-12 rounded-2xl shadow-2xl shadow-black/50 opacity-0 animate-slide-up transform transition-all duration-500 hover:border-white/20 hover:shadow-luxury-gold/5 group">
+            
+            <div class="text-center mb-10">
+                <h1 class="font-serif text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-200 to-gray-500 mb-4">
+                    NEX
+                </h1>
+                <p class="font-sans text-sm text-gray-400 font-light leading-relaxed">
+                    Membership is strictly by invitation.<br>Please authenticate to proceed.
+                </p>
+            </div>
+
+            <!-- Form -->
+            <form id="accessForm" class="space-y-8" onsubmit="handleSubmit(event)">
+                <div class="relative group/input">
+                    <input 
+                        type="password" 
+                        id="inviteCode" 
+                        required
+                        class="block py-3 px-0 w-full text-base text-center text-white bg-transparent border-0 border-b border-gray-700 appearance-none focus:outline-none focus:ring-0 focus:border-luxury-gold transition-colors duration-300 placeholder-gray-600 tracking-[0.2em]" 
+                        placeholder="ACCESS CODE" 
+                        autocomplete="off"
+                    />
+                    <div class="absolute bottom-0 left-0 w-0 h-[1px] bg-luxury-gold transition-all duration-500 group-hover/input:w-full"></div>
+                </div>
+
+                <div class="relative">
+                    <button 
+                        type="submit" 
+                        id="submitBtn"
+                        class="relative w-full overflow-hidden group bg-white text-black font-sans text-xs font-semibold tracking-widest uppercase py-4 px-6 rounded-sm transition-all duration-300 hover:bg-luxury-gold hover:text-black hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-luxury-gold/50 focus:ring-offset-2 focus:ring-offset-black"
+                    >
+                        <span class="relative z-10 flex items-center justify-center gap-2">
+                            Unlock Access <i data-lucide="arrow-right" class="w-3 h-3 transition-transform duration-300 group-hover:translate-x-1"></i>
+                        </span>
+                        <div class="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent z-0"></div>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Status Message (Hidden by default) -->
+            <div id="statusMessage" class="mt-6 text-center h-4 opacity-0 transition-opacity duration-300">
+                <span class="text-xs font-sans tracking-widest text-red-400">INVALID CREDENTIALS</span>
+            </div>
+
+            <!-- Secondary Action -->
+            <div class="mt-8 pt-8 border-t border-white/5 text-center">
+                <a href="#" class="inline-block text-[10px] uppercase tracking-[0.2em] text-gray-500 hover:text-luxury-gold transition-colors duration-300 border-b border-transparent hover:border-luxury-gold pb-0.5">
+                    Request an Invitation
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 opacity-0 animate-fade-in text-center">
+            <p class="font-sans text-[10px] text-gray-600 tracking-wider">
+                &copy; 2025 NEX 
+            </p>
+        </footer>
+
+    </main>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Canvas Background Animation (Stars/Particles)
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let particlesArray = [];
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            init();
+        });
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 1.5;
+                this.speedX = (Math.random() * 0.2) - 0.1;
+                this.speedY = (Math.random() * 0.2) - 0.1;
+                this.opacity = Math.random() * 0.5;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.y < 0) this.y = canvas.height;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            particlesArray = [];
+            for (let i = 0; i < 100; i++) {
+                particlesArray.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        init();
+        animate();
+
+        // Mouse Glow Effect
+        const glow = document.getElementById('glow');
+        document.addEventListener('mousemove', (e) => {
+            glow.style.transform = `translate(${e.clientX - 150}px, ${e.clientY - 150}px)`;
+        });
+
+        // Form Logic
+        function handleSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const input = document.getElementById('inviteCode');
+            const status = document.getElementById('statusMessage');
+            const originalBtnText = btn.innerHTML;
+
+            // Loading State
+            btn.innerHTML = '<span class="animate-pulse">VERIFYING...</span>';
+            btn.disabled = true;
+            status.style.opacity = '0';
+            input.blur();
+
+            // Simulate API Call
+            setTimeout(() => {
+                const code = input.value.trim().toUpperCase();
+                
+                // Mock Validation
+                if (code === 'NEX' || code === 'GOLD' || code === 'ADMIN') {
+                    // Success
+                    btn.classList.remove('bg-white', 'text-black');
+                    btn.classList.add('bg-luxury-gold', 'text-black');
+                    btn.innerHTML = 'ACCESS GRANTED';
+                    
+                    status.innerHTML = '<span class="text-xs font-sans tracking-widest text-green-400">WELCOME MEMBER</span>';
+                    status.style.opacity = '1';
+
+                    // Optional: Redirect simulation
+                    setTimeout(() => {
+                        document.body.style.transition = "opacity 1s ease";
+                        document.body.style.opacity = "0";
+                    }, 1000);
+
+                } else {
+                    // Failure
+                    btn.innerHTML = originalBtnText;
+                    btn.disabled = false;
+                    
+                    // Shake animation for input
+                    input.classList.add('animate-[pulse_0.2s_ease-in-out_2]');
+                    setTimeout(() => input.classList.remove('animate-[pulse_0.2s_ease-in-out_2]'), 500);
+
+                    status.innerHTML = '<span class="text-xs font-sans tracking-widest text-red-400">INVALID CREDENTIALS</span>';
+                    status.style.opacity = '1';
+                }
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
